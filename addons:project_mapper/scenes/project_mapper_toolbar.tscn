@@ -1,0 +1,58 @@
+[gd_scene format=3 uid="uid://dm2pmrcddjsg8"]
+
+[node name="ProjectMapperToolbar" type="VBoxContainer" unique_id=1583226405]
+anchors_preset = 10
+anchor_right = 1.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="Spacer" type="Control" parent="." unique_id=500521508]
+layout_mode = 2
+
+[node name="ToolbarMargin" type="MarginContainer" parent="." unique_id=1482723728]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 20
+
+[node name="HBoxContainer" type="HBoxContainer" parent="ToolbarMargin" unique_id=1813471794]
+layout_mode = 2
+mouse_filter = 0
+
+[node name="ReorganiseButton" type="Button" parent="ToolbarMargin/HBoxContainer" unique_id=196961474]
+layout_mode = 2
+text = "Reorganise"
+
+[node name="VSeparator" type="VSeparator" parent="ToolbarMargin/HBoxContainer" unique_id=1056958640]
+layout_mode = 2
+
+[node name="ExpandButton" type="Button" parent="ToolbarMargin/HBoxContainer" unique_id=1817054307]
+layout_mode = 2
+text = "Expand All"
+
+[node name="VSeparator2" type="VSeparator" parent="ToolbarMargin/HBoxContainer" unique_id=1225944468]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="ToolbarMargin/HBoxContainer" unique_id=517287683]
+layout_mode = 2
+text = "Search:"
+
+[node name="SearchEdit" type="LineEdit" parent="ToolbarMargin/HBoxContainer" unique_id=523488604]
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+placeholder_text = "class, variable or function..."
+clear_button_enabled = true
+
+[node name="VSeparator3" type="VSeparator" parent="ToolbarMargin/HBoxContainer" unique_id=418889817]
+layout_mode = 2
+
+[node name="StraightLinesButton" type="CheckButton" parent="ToolbarMargin/HBoxContainer" unique_id=2111645775]
+layout_mode = 2
+text = "Straight Lines"
+
+[node name="VSeparator4" type="VSeparator" parent="ToolbarMargin/HBoxContainer" unique_id=319256236]
+layout_mode = 2
+
+[node name="SyncButton" type="CheckButton" parent="ToolbarMargin/HBoxContainer" unique_id=91174645]
+layout_mode = 2
+button_pressed = true
+text = "Sync Selection"

@@ -1,0 +1,9 @@
+[gd_scene format=3 uid="uid://dhfng66mn87fw"]
+
+[sub_resource type="StyleBoxLine" id="StyleBoxLine_nl80e"]
+color = Color(1, 1, 1, 0.101960786)
+thickness = 2
+
+[node name="ListSeparator" type="HSeparator" unique_id=1327405549]
+size_flags_horizontal = 3
+theme_override_styles/separator = SubResource("StyleBoxLine_nl80e")

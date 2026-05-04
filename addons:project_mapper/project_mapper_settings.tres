@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="ProjectMapperSettings" format=3 uid="uid://cpfvci0t4de7"]
+
+[ext_resource type="Script" uid="uid://bgo5ystfeaj0x" path="res://addons/project_mapper/classes/project_mapper_settings.gd" id="1_bew1t"]
+
+[sub_resource type="FontVariation" id="FontVariation_pbmtd"]
+variation_embolden = 0.8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pbmtd"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.12, 0.12, 0.15, 0.45)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.3, 0.3, 0.35, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_83bx0"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.15, 0.15, 0.2, 0.45)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.3, 0.3, 0.35, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[resource]
+script = ExtResource("1_bew1t")
+node_panel_builtin = SubResource("StyleBoxFlat_pbmtd")
+node_titlebar_builtin = SubResource("StyleBoxFlat_83bx0")
+bold_font = SubResource("FontVariation_pbmtd")

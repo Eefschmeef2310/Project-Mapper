@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://dljdkcvuqd44n"]
+
+[node name="SectionToggle" type="Button" unique_id=2039228312]
+mouse_default_cursor_shape = 2
+flat = true
+alignment = 0

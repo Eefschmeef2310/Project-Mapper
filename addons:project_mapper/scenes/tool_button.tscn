@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://cgf27hfvgwq4o"]
+
+[node name="ToolButton" type="Button" unique_id=1010872109]
+custom_minimum_size = Vector2(180, 0)
+mouse_default_cursor_shape = 2
+theme_override_font_sizes/font_size = 15
+text = "TODO Button"
+flat = true
+alignment = 0
+clip_text = true
