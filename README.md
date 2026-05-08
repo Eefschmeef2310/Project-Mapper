@@ -32,7 +32,7 @@ Graph nodes include information about a class':
 * Variables
 * Static functions
 * Instance functions
-* Override Functions
+* Override Functions (Functions will be coloured differently whether or not the function calls the parent function through `super()`)
 * TODOs
 
 Clicking any item in a graph node dropdown with the Script window open will go to the specific line where the item is defined.
