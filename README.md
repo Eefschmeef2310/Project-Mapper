@@ -44,7 +44,7 @@ Opening a function dropdown shows the selected class' outgoing function calls (g
 NOTE: The Project Mapper does not track function calls within a class.
 
 # View settings
-Finally, `project_mapper_settings.tres` contains settings you can use to control how you want the project to look. This includes various color and style options.
+Finally, the `project_mapper_settings.tres` file contains settings you can use to control how you want the project to look. This includes various color and style options.
 <img width="385" height="604" alt="Screenshot 2026-05-08 at 11 01 35 am" src="https://github.com/user-attachments/assets/9f6653f5-8a41-40ce-a832-89bee0700fd9" />
 
 # License
