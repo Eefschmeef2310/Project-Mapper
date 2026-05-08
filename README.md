@@ -21,9 +21,27 @@ The top of the window contains the following controls for the graph view:
 * **Straight Lines Toggle**: Toggles the grpah view between straight or curved lines.
 * **Sync selection Toggle**: By enablign this, graph nodes will automatically be selected if the class' file is open in the Script Editor.
 
-## Nodes
+## Graph Nodes
+Each graph node contains information on each class, and how they relate to other classes.
+<img width="131" height="354" alt="Screenshot 2026-05-08 at 12 06 11 pm" src="https://github.com/user-attachments/assets/587b3943-426b-4544-b45c-b932b62b90fa" />
+
+Graph nodes include information about a class':
+* Autoload status (Graph node will be colored separately if the class is an autoload, yellow by default)
+* Name (Clicking this will select the graph node, and show the path of inheritance with a separate color, pink by default)
+* Following generation children count
+* Variables
+* Static functions
+* Instance functions
+* Override Functions
+* TODOs
+
+Clicking any item in a graph node dropdown with the Script window open will go to the specific line where the item is defined.
 
 ## Connections
+Opening a function dropdown shows the selected class' outgoing function calls (green by default), and which other classes are calling the selected classes functions (blue by default). By viewing this, it is possible to better track how classes interact with each other.
+<img width="544" height="541" alt="Screenshot 2026-05-08 at 1 19 53 pm" src="https://github.com/user-attachments/assets/676e023e-ee86-4075-b05b-2bfb0498394e" />
+
+NOTE: The Project Mapper does not track function calls within a class.
 
 # View settings
 Finally, `project_mapper_settings.tres` contains settings you can use to control how you want the project to look. This includes various color and style options.
