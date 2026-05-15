@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://dnna7ajx7urn5"]
 
-[ext_resource type="Script" uid="uid://6bvrbejt6wdq" path="res://addons/project_mapper/classes/ProjectMapper.gd" id="1_s6k42"]
+[ext_resource type="Script" uid="uid://6bvrbejt6wdq" path="res://addons/project_mapper/classes/project_mapper.gd" id="1_s6k42"]
 [ext_resource type="PackedScene" uid="uid://dm2pmrcddjsg8" path="res://addons/project_mapper/scenes/project_mapper_toolbar.tscn" id="2_6svym"]
 [ext_resource type="Resource" uid="uid://cpfvci0t4de7" path="res://addons/project_mapper/project_mapper_settings.tres" id="2_gm68t"]
 [ext_resource type="PackedScene" uid="uid://cgf27hfvgwq4o" path="res://addons/project_mapper/scenes/tool_button.tscn" id="3_ev3mb"]
