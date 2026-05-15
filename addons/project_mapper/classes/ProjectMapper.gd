@@ -31,6 +31,7 @@ var _dropdown_open_nodes : Dictionary
 @export var item_button_packed : PackedScene
 @export var todo_button_packed : PackedScene
 @export var list_separator_packed : PackedScene
+@export var icon_texture_packed : PackedScene
 
 var _arrow_overlay : ArrowOverlay
 var _selected_node : String = ""
@@ -46,7 +47,6 @@ func _ready() -> void:
 	visibility_changed.connect(_on_visibility_changed)
 	if Engine.is_editor_hint():
 		EditorInterface.get_resource_filesystem().filesystem_changed.connect(_on_filesystem_changed)
-
 func _apply_line_curve() -> void:
 	connection_lines_curvature = 0.0 if _straight_lines else 0.5
 
@@ -75,27 +75,20 @@ func _refresh_visuals() -> void:
 		var is_builtin = data.get("builtin")
 
 		if is_builtin:
-			graph_node.add_theme_stylebox_override("panel", settings.node_panel_builtin.duplicate())
-			graph_node.add_theme_stylebox_override("titlebar", settings.node_titlebar_builtin.duplicate())
-			
 			graph_node.modulate = settings.builtin_modulate
 		else:
+			var dimmed := graph_node.modulate.a < 0.5
+			graph_node.self_modulate = _autoload_color(class_name_)
+			graph_node.modulate = Color.WHITE
+			if dimmed: graph_node.modulate.a = 0.15
 			if _dropdown_open_nodes.has(class_name_):
-				_apply_border(graph_node, Color.WHITE)
+				_apply_border(graph_node, _autoload_color(class_name_))
 			elif _bordered.get(class_name_) == "blue":
 				_apply_blue_border(graph_node)
 			elif _bordered.get(class_name_) == "green":
 				_apply_green_border(graph_node)
 			else:
 				_remove_border(graph_node)
-			
-			var dimmed := graph_node.modulate.a < 0.5
-			var is_autoload = data.has("autoload_name")
-			if is_autoload:
-				var c := settings.autoload_color
-				graph_node.modulate = Color(c.r, c.g, c.b, 0.15 if dimmed else c.a)
-			else:
-				graph_node.modulate.a = 0.15 if dimmed else 1.0
 
 		_refresh_node_font_colors(graph_node, class_name_, data)
 		
@@ -110,6 +103,18 @@ func _refresh_visuals() -> void:
 	if _selected_node != "" and _graph_nodes.has(_selected_node):
 		_on_node_selected(_graph_nodes[_selected_node])
 
+func _section_color(label: String) -> Color:
+	match label:
+		"Scenes": return settings.font_scene
+		"Signals": return settings.font_signal
+		"Variables": return settings.font_variables_header
+		"Functions": return settings.font_functions_header
+		"Built-in Functions": return settings.font_builtin_functions_header
+		"Static Functions": return settings.font_static_functions_header
+		"Overrides": return settings.font_override_functions_header
+		"TODOs": return settings.font_todo_header
+	return Color.WHITE
+
 func _refresh_node_font_colors(graph_node: GraphNode, class_name_: String, data: Dictionary) -> void:
 	var overrides : Dictionary = _get_overrides(class_name_)
 	var missing_super : Dictionary = {}
@@ -118,21 +123,24 @@ func _refresh_node_font_colors(graph_node: GraphNode, class_name_: String, data:
 			missing_super[f["name"]] = true
 
 	for child in graph_node.get_children():
-		if not child is Button:
-			continue
-	
-		# Handle section items (variables, functions, todos)
-		if child.get_meta("section_item", false):
-			var item_type : String = child.get_meta("item_type", "")
-			if item_type == "todo":
-				child.add_theme_color_override("font_color", settings.font_todo_item)
-			elif item_type == "variable":
-				child.add_theme_color_override("font_color", settings.font_variable)
+		if child is Button:
+			child.add_theme_color_override("font_hover_color", settings.font_hover)
+
+	for dd in graph_node.get_meta("dropdowns", []):
+		var toggle : Button = dd["toggle"]
+		var section_col := _section_color(dd["label"])
+		toggle.add_theme_color_override("font_color", section_col)
+		for item in dd["items"]:
+			if not item is Button: continue
+			var item_type : String = item.get_meta("item_type", "")
+			if item_type == "signal":
+				var emitted : bool = item.get_meta("signal_emitted", false)
+				item.add_theme_color_override("font_color", settings.font_signal if emitted else settings.font_signal_unemitted)
 			elif item_type == "function":
-				var fname : String = child.get_meta("func_name", "")
-				var color := settings.font_missing_super if missing_super.has(fname) else (settings.font_override if overrides.has(fname) else settings.font_variable)
-				child.add_theme_color_override("font_color", color)
-		child.add_theme_color_override("font_hover_color", settings.font_hover)
+				var fname : String = item.get_meta("func_name", "")
+				item.add_theme_color_override("font_color", settings.font_missing_super if missing_super.has(fname) else section_col)
+			else:
+				item.add_theme_color_override("font_color", section_col)
 
 func _on_expand_button_pressed():
 	_all_expanded = !_all_expanded
@@ -143,7 +151,7 @@ func _on_straight_lines_checked(on: bool):
 	_straight_lines = on
 	_apply_line_curve()
 
-func _on_sync_selection_changed(on: bool): 
+func _on_sync_selection_changed(on: bool):
 	_editor_sync = on
 
 func _on_visibility_changed() -> void:
@@ -194,9 +202,12 @@ func _clear_graph() -> void:
 	clear_connections()
 	for child in get_children():
 		if child is GraphElement: child.free()
-	_graph_nodes = {}; _class_data = {}
-	_has_parent = {}; _has_child = {}
-	_green_edges = {}; _bordered = {}
+	_graph_nodes = {}
+	_class_data = {}
+	_has_parent = {}
+	_has_child = {}
+	_green_edges = {}
+	_bordered = {}
 	_dropdown_open_nodes = {}
 
 func _set_all_dropdowns(expanded: bool) -> void:
@@ -211,11 +222,12 @@ func _set_all_dropdowns(expanded: bool) -> void:
 			var gn: GraphNode = _graph_nodes[class_name_]
 			var has_func_dd := false
 			for dd in gn.get_meta("dropdowns", []):
-				if dd["label"] != "Variables" and dd["label"] != "TODOs" and dd["items"].size() > 0:
-					has_func_dd = true; break
+				if dd["label"] != "Variables" and dd["label"] != "TODOs" and dd["label"] != "Signals" and dd["label"] != "Scenes" and dd["items"].size() > 0:
+					has_func_dd = true
+					break
 			if has_func_dd:
 				_dropdown_open_nodes[class_name_] = true
-				_apply_border(gn, Color.WHITE)
+				_apply_border(gn, _autoload_color(class_name_))
 	else:
 		_dropdown_open_nodes.clear()
 		for class_name_ in _graph_nodes:
@@ -236,6 +248,8 @@ func _class_matches(class_name_: String, query: String) -> bool:
 	if class_name_.to_lower().contains(query_lower): return true
 	for variable in _class_data.get(class_name_, {}).get("variables", []):
 		if (variable["name"] as String).to_lower().contains(query_lower): return true
+	for signal_ in _class_data.get(class_name_, {}).get("signals", []):
+		if (signal_["name"] as String).to_lower().contains(query_lower): return true
 	for function_ in _class_data.get(class_name_, {}).get("functions", []):
 		if (function_["name"] as String).to_lower().contains(query_lower): return true
 	return false
@@ -281,21 +295,20 @@ func _create_class_nodes() -> void:
 		var data : Dictionary = _class_data[class_name_]
 		var autoload_name: String = data.get("autoload_name", "")
 		var graph_node := _make_node(class_name_, data["path"],
-			data.get("variables", []), data.get("functions", []),
+			data.get("scenes", []), data.get("variables", []), data.get("signals", []), data.get("functions", []),
 			_get_overrides(class_name_), data.get("builtin", false),
 			child_counts.get(class_name_, 0), autoload_name,
 			generation_map.get(class_name_, 0))
 		add_child(graph_node)
 		_graph_nodes[class_name_] = graph_node
-		var is_builtin : bool = data.get("builtin", false)
-		if is_builtin:
-			graph_node.add_theme_stylebox_override("panel", settings.node_panel_builtin.duplicate())
-			graph_node.add_theme_stylebox_override("titlebar", settings.node_titlebar_builtin.duplicate())
-		elif autoload_name != "":
-			graph_node.modulate = settings.autoload_color
+		if autoload_name != "":
+			graph_node.self_modulate = settings.autoload_color
 
 func _draw_inheritance_connections() -> void:
-	clear_connections(); _has_parent.clear(); _has_child.clear()
+	clear_connections()
+	_has_parent.clear()
+	_has_child.clear()
+	
 	for class_name_ in _class_data:
 		var parent_name : String = _class_data[class_name_]["extends"]
 		if _graph_nodes.has(parent_name):
@@ -340,7 +353,7 @@ func _rebuild_call_edges() -> void:
 		for i in range(1, gn.get_child_count()):
 			gn.set_slot(i, false, 0, Color.WHITE, false, 0, Color.WHITE)
 		if _dropdown_open_nodes.has(class_name_):
-			_apply_border(gn, Color.WHITE)
+			_apply_border(gn, _autoload_color(class_name_))
 		else:
 			_remove_border(gn)
 
@@ -355,7 +368,7 @@ func _rebuild_call_edges() -> void:
 		var gn: GraphNode = _graph_nodes[target_class]
 		var combined: Array = []
 		for dd in gn.get_meta("dropdowns", []):
-			if dd["label"] == "Variables" or dd["label"] == "TODOs": continue
+			if dd["label"] == "Variables" or dd["label"] == "TODOs" or dd["label"] == "Signals" or dd["label"] == "Scenes": continue
 			if dd["items"].size() > 0 and dd["items"][0].visible:
 				combined += dd.get("funcs", [])
 		open_func_sets[target_class] = combined
@@ -419,7 +432,8 @@ func _rebuild_call_edges() -> void:
 				for conn in conns_snap:
 					if conn["from_node"] == caller_class and conn["to_node"] == target_class \
 							and conn["to_port"] == to_port and conn["from_port"] == caller_out_port:
-						already = true; break
+						already = true
+						break
 				if not already:
 					connect_node(caller_class, caller_out_port, target_class, to_port)
 
@@ -526,7 +540,8 @@ func _rebuild_call_edges() -> void:
 			for conn in conns_snap:
 				if conn["from_node"] == target_class and conn["to_node"] == callee_class \
 						and conn["from_port"] == target_out_port and conn["to_port"] == to_port:
-					already = true; break
+					already = true
+					break
 			if not already:
 				connect_node(target_class, target_out_port, callee_class, to_port)
 
@@ -592,7 +607,8 @@ func _refresh_call_slots() -> void:
 
 func _on_node_selected(node: Node) -> void:
 	_selected_node = node.name
-	_clear_highlights(); _bring_to_front(node as GraphNode)
+	_clear_highlights()
+	_bring_to_front(node as GraphNode)
 	var class_name_ : String = node.name
 	var parent_name : String = _class_data.get(class_name_, {}).get("extends", "")
 	while _graph_nodes.has(parent_name):
@@ -622,18 +638,33 @@ func _clear_highlights() -> void:
 			_has_child.has(class_name_), 0, slot_color)
 
 func _apply_border(graph_node: GraphNode, border_color: Color) -> void:
-	for theme_type in ["panel", "titlebar"]:
-		var sb : StyleBoxFlat = graph_node.get_theme_stylebox(theme_type).duplicate()
+	for theme_type in ["panel", "titlebar", "panel_selected", "titlebar_selected"]:
+		var base = theme_type.replace("_selected", "")
+		var sb : StyleBoxFlat = graph_node.get_theme_stylebox(base).duplicate()
 		sb.border_color = border_color
-		sb.set_border_width_all(2)
+		if base == "titlebar":
+			sb.set_border_width(SIDE_TOP, 2)
+			sb.set_border_width(SIDE_LEFT, 2)
+			sb.set_border_width(SIDE_RIGHT, 2)
+			sb.set_border_width(SIDE_BOTTOM, 0)
+		else:
+			sb.set_border_width(SIDE_TOP, 0)
+			sb.set_border_width(SIDE_LEFT, 2)
+			sb.set_border_width(SIDE_RIGHT, 2)
+			sb.set_border_width(SIDE_BOTTOM, 2)
 		graph_node.add_theme_stylebox_override(theme_type, sb)
 
 func _remove_border(graph_node: GraphNode) -> void:
-	graph_node.remove_theme_stylebox_override("panel")
-	graph_node.remove_theme_stylebox_override("titlebar")
+	for t in ["panel", "titlebar", "panel_selected", "titlebar_selected"]:
+		graph_node.remove_theme_stylebox_override(t)
 
-func _apply_blue_border(graph_node: GraphNode) -> void: _apply_border(graph_node, settings.call_edge_color); _bordered[graph_node.name] = "blue"
-func _apply_green_border(graph_node: GraphNode) -> void: _apply_border(graph_node, settings.call_edge_out_color); _bordered[graph_node.name] = "green"
+func _apply_blue_border(graph_node: GraphNode) -> void: 
+	_apply_border(graph_node, settings.call_edge_color)
+	_bordered[graph_node.name] = "blue"
+	
+func _apply_green_border(graph_node: GraphNode) -> void: 
+	_apply_border(graph_node, settings.call_edge_out_color)
+	_bordered[graph_node.name] = "green"
 
 func _autoload_color(class_name_: String) -> Color:
 	return settings.autoload_color if _class_data.get(class_name_, {}).has("autoload_name") else Color.WHITE
@@ -746,7 +777,7 @@ func _make_section_toggle(section_label: String, item_count: int) -> Button:
 	toggle.add_theme_font_override("font", settings.bold_font)
 	return toggle
 
-func _make_node(class_name_: String, script_path: String, variables: Array, functions: Array,
+func _make_node(class_name_: String, script_path: String, scenes: Array, variables: Array, signals: Array, functions: Array,
 		overrides: Dictionary, builtin: bool = false, child_count: int = 0, autoload_name: String = "",
 		generation: int = 0) -> GraphNode:
 	var graph_node := GraphNode.new()
@@ -761,6 +792,16 @@ func _make_node(class_name_: String, script_path: String, variables: Array, func
 	if title_label:
 		title_label.mouse_filter = Control.MOUSE_FILTER_PASS
 		title_label.tooltip_text = "Generation %d" % generation
+	var icon_class := class_name_
+	while icon_class != "" and not ClassDB.class_exists(icon_class):
+		icon_class = _class_data.get(icon_class, {}).get("extends", "")
+	if icon_class != "":
+		var icon_tex := EditorInterface.get_base_control().get_theme_icon(icon_class, "EditorIcons")
+		if icon_tex:
+			var icon_rect = icon_texture_packed.instantiate() as TextureRect
+			icon_rect.texture = icon_tex
+			titlebar_hbox.add_child(icon_rect)
+			titlebar_hbox.move_child(icon_rect, 0)
 	if child_count > 0:
 		var count_label := Label.new()
 		count_label.text = "(%d %s)" % [child_count, "Child" if child_count == 1 else "Children"]
@@ -775,7 +816,8 @@ func _make_node(class_name_: String, script_path: String, variables: Array, func
 		graph_node.modulate = settings.builtin_modulate
 
 	var file_button := Button.new()
-	file_button.text = script_path.replace("res://", ""); file_button.flat = true
+	file_button.text = "../%s/%s" % [script_path.get_base_dir().get_file(), script_path.get_file()]
+	file_button.flat = true
 	file_button.pressed.connect(func(): _open_script(script_path, 0))
 	graph_node.add_child(file_button)
 
@@ -784,12 +826,17 @@ func _make_node(class_name_: String, script_path: String, variables: Array, func
 	# Adds a section with items as direct children of graph_node (not VBoxContainer),
 	# so each function button gets its own GraphNode slot for per-function port positioning.
 	var add_items_direct := func(items_out: Array, item_arr: Array, make_btn: Callable, track_slots: bool) -> void:
-		var sep0 := _make_separator_line(); sep0.visible = false
-		graph_node.add_child(sep0); items_out.append(sep0)
+		var sep0 := _make_separator_line() 
+		sep0.visible = false
+		graph_node.add_child(sep0)
+		items_out.append(sep0)
+		
 		for i in item_arr.size():
 			if i > 0:
-				var sep := _make_separator_line(); sep.visible = false
-				graph_node.add_child(sep); items_out.append(sep)
+				var sep := _make_separator_line()
+				sep.visible = false
+				graph_node.add_child(sep)
+				items_out.append(sep)
 			var btn : Button = make_btn.call(item_arr[i])
 			btn.set_meta("section_item", true)
 			btn.visible = false
@@ -797,19 +844,76 @@ func _make_node(class_name_: String, script_path: String, variables: Array, func
 			items_out.append(btn)
 			if track_slots:
 				func_slot_map[item_arr[i]["name"]] = graph_node.get_child_count() - 1
-		var sep_end := _make_separator_line(); sep_end.visible = false
-		graph_node.add_child(sep_end); items_out.append(sep_end)
+		var sep_end := _make_separator_line()
+		sep_end.visible = false
+		graph_node.add_child(sep_end)
+		items_out.append(sep_end)
+
+	if scenes.size() > 0:
+		var toggle := _make_section_toggle("Scenes", scenes.size())
+		toggle.add_theme_color_override("font_color", settings.font_scene)
+		graph_node.add_child(toggle)
+		var items : Array = []
+		var make_scene_btn := func(scene_path_: String) -> Button:
+			var btn := item_button_packed.instantiate()
+			btn.text = " %s" % scene_path_.get_file()
+			btn.tooltip_text = scene_path_
+			btn.add_theme_color_override("font_color", settings.font_scene)
+			btn.add_theme_color_override("font_hover_color", settings.font_hover)
+			btn.set_meta("item_type", "scene")
+			btn.pressed.connect(func(): EditorInterface.open_scene_from_path(scene_path_))
+			return btn
+		add_items_direct.call(items, scenes, make_scene_btn, false)
+		toggle.pressed.connect(func():
+			var expanding = not items[0].visible
+			for item in items: item.visible = expanding
+			toggle.text = "%s Scenes (%d)" % ["▼" if expanding else "▶", scenes.size()]
+			if _dropdown_open_nodes.has(class_name_):
+				call_deferred("_rebuild_call_edges")
+			if not expanding: graph_node.reset_size())
+		graph_node.get_meta("dropdowns").append({"toggle": toggle, "items": items, "label": "Scenes", "count": scenes.size()})
+
+	if signals.size() > 0:
+		var toggle := _make_section_toggle("Signals", signals.size())
+		toggle.add_theme_color_override("font_color", settings.font_signal)
+		graph_node.add_child(toggle)
+		var items : Array = []
+		var make_signal_btn := func(sig: Dictionary) -> Button:
+			var btn := item_button_packed.instantiate()
+			btn.text = " %s(%s)" % [sig["name"], sig["args"]]
+			var color := settings.font_signal if sig["emitted"] else settings.font_signal_unemitted
+			btn.add_theme_color_override("font_color", color)
+			btn.add_theme_color_override("font_hover_color", settings.font_hover)
+			btn.set_meta("item_type", "signal")
+			btn.set_meta("signal_emitted", sig["emitted"])
+			if not sig["emitted"]:
+				btn.tooltip_text = "Signal is never emitted in this class"
+			var line: int = sig["line"]
+			btn.pressed.connect(func(): _open_script(script_path, line))
+			return btn
+		add_items_direct.call(items, signals, make_signal_btn, false)
+		toggle.pressed.connect(func():
+			var expanding = not items[0].visible
+			for item in items: item.visible = expanding
+			toggle.text = "%s Signals (%d)" % ["▼" if expanding else "▶", signals.size()]
+			if _dropdown_open_nodes.has(class_name_):
+				call_deferred("_rebuild_call_edges")
+			if not expanding: graph_node.reset_size())
+		graph_node.get_meta("dropdowns").append({"toggle": toggle, "items": items, "label": "Signals", "count": signals.size()})
 
 	if variables.size() > 0:
-		var toggle := _make_section_toggle("Variables", variables.size()); graph_node.add_child(toggle)
+		var toggle := _make_section_toggle("Variables", variables.size())
+		toggle.add_theme_color_override("font_color", settings.font_variables_header)
+		graph_node.add_child(toggle)
 		var items : Array = []
 		var make_var_btn := func(v: Dictionary) -> Button:
 			var btn := item_button_packed.instantiate()
 			btn.text = " %s: %s" % [v["name"], v["type"]]
-			btn.add_theme_color_override("font_color", settings.font_variable)
+			btn.add_theme_color_override("font_color", settings.font_variables_header)
 			btn.add_theme_color_override("font_hover_color", settings.font_hover)
 			btn.set_meta("item_type", "variable")
-			var line: int = v["line"]; btn.pressed.connect(func(): _open_script(script_path, line))
+			var line: int = v["line"]
+			btn.pressed.connect(func(): _open_script(script_path, line))
 			return btn
 		add_items_direct.call(items, variables, make_var_btn, false)
 		toggle.pressed.connect(func():
@@ -821,11 +925,22 @@ func _make_node(class_name_: String, script_path: String, variables: Array, func
 			if not expanding: graph_node.reset_size())
 		graph_node.get_meta("dropdowns").append({"toggle": toggle, "items": items, "label": "Variables", "count": variables.size()})
 
+	var godot_method_names : Dictionary = {}
+	var builtin_ancestor : String = _class_data[class_name_].get("extends", "")
+	while _class_data.has(builtin_ancestor) and not _class_data[builtin_ancestor].get("builtin", false):
+		builtin_ancestor = _class_data[builtin_ancestor].get("extends", "")
+	if ClassDB.class_exists(builtin_ancestor):
+		for method in ClassDB.class_get_method_list(builtin_ancestor, false):
+			godot_method_names[method["name"]] = true
+
 	var own_functions : Array = []
+	var own_builtin_functions : Array = []
 	var own_static_functions : Array = []
 	var override_functions : Array = []
 	for func_ in functions:
-		if overrides.has(func_["name"]):
+		if godot_method_names.has(func_["name"]):
+			own_builtin_functions.append(func_)
+		elif overrides.has(func_["name"]):
 			override_functions.append(func_)
 		elif func_.get("static", false):
 			own_static_functions.append(func_)
@@ -834,21 +949,24 @@ func _make_node(class_name_: String, script_path: String, variables: Array, func
 
 	var make_function_dropdown := func(section_label: String, func_arr: Array) -> void:
 		if func_arr.is_empty(): return
-		var toggle := _make_section_toggle(section_label, func_arr.size()); graph_node.add_child(toggle)
+		var toggle := _make_section_toggle(section_label, func_arr.size())
+		var section_col := _section_color(section_label)
+		toggle.add_theme_color_override("font_color", section_col)
+		graph_node.add_child(toggle)
 		var items : Array = []
 		var make_func_btn := func(func_: Dictionary) -> Button:
 			var is_override : bool = overrides.has(func_["name"])
 			var missing_super : bool = is_override and not func_.get("calls_super", false)
 			var btn := item_button_packed.instantiate()
 			btn.text = " %s(%s): %s%s" % [func_["name"], func_["args"], func_["return"], " ⬆" if is_override else ""]
-			var font_color := settings.font_missing_super if missing_super else (settings.font_override if is_override else settings.font_variable)
-			btn.add_theme_color_override("font_color", font_color)
+			btn.add_theme_color_override("font_color", settings.font_missing_super if missing_super else section_col)
 			btn.add_theme_color_override("font_hover_color", settings.font_hover)
 			if missing_super:
 				btn.tooltip_text = "⚠ super() is not called"
 			btn.set_meta("item_type", "function")
 			btn.set_meta("func_name", func_["name"])
-			var line: int = func_["line"]; btn.pressed.connect(func(): _open_script(script_path, line))
+			var line: int = func_["line"]
+			btn.pressed.connect(func(): _open_script(script_path, line))
 			return btn
 		add_items_direct.call(items, func_arr, make_func_btn, true)
 		toggle.pressed.connect(func():
@@ -857,7 +975,7 @@ func _make_node(class_name_: String, script_path: String, variables: Array, func
 			toggle.text = "%s %s (%d)" % ["▼" if expanding else "▶", section_label, func_arr.size()]
 			if expanding:
 				_dropdown_open_nodes[class_name_] = true
-				_apply_border(graph_node, Color.WHITE)
+				_apply_border(graph_node, _autoload_color(class_name_))
 				call_deferred("_rebuild_call_edges")
 			else:
 				graph_node.reset_size()
@@ -865,7 +983,8 @@ func _make_node(class_name_: String, script_path: String, variables: Array, func
 				for dd in graph_node.get_meta("dropdowns", []):
 					if dd["label"] == "Variables" or dd["label"] == "TODOs": continue
 					if dd["items"].size() > 0 and dd["items"][0].visible:
-						any_open = true; break
+						any_open = true
+						break
 				if not any_open:
 					_dropdown_open_nodes.erase(class_name_)
 				_rebuild_call_edges()
@@ -874,17 +993,19 @@ func _make_node(class_name_: String, script_path: String, variables: Array, func
 
 	make_function_dropdown.call("Static Functions", own_static_functions)
 	make_function_dropdown.call("Functions", own_functions)
+	make_function_dropdown.call("Built-in Functions", own_builtin_functions)
 	make_function_dropdown.call("Overrides", override_functions)
 
 	var todos: Array = _class_data[class_name_].get("todos", [])
 	if todos.size() > 0:
 		var toggle := _make_section_toggle("TODOs", todos.size())
-		toggle.add_theme_color_override("font_color", settings.font_todo_header); graph_node.add_child(toggle)
+		toggle.add_theme_color_override("font_color", settings.font_todo_header)
+		graph_node.add_child(toggle)
 		var items : Array = []
 		var make_todo_btn := func(todo: Dictionary) -> Button:
 			var btn := todo_button_packed.instantiate() as Button
 			btn.text = " L%d: %s" % [todo["line"], todo["text"]]
-			btn.add_theme_color_override("font_color", settings.font_todo_item)
+			btn.add_theme_color_override("font_color", settings.font_todo_header)
 			btn.add_theme_color_override("font_hover_color", settings.font_hover)
 			btn.set_meta("item_type", "todo")
 			btn.pressed.connect(func(): _open_script(script_path, todo["line"]))
@@ -902,3 +1023,7 @@ func _make_node(class_name_: String, script_path: String, variables: Array, func
 func _open_script(script_path: String, line: int) -> void:
 	var script := load(script_path) as Script
 	if script: EditorInterface.edit_script(script, line, 0)
+
+
+func _on_begin_node_move() -> void:
+	pass # Replace with function body.

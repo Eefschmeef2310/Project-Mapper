@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" uid="uid://dljdkcvuqd44n" path="res://addons/project_mapper/scenes/section_toggle.tscn" id="3_nnh7x"]
 [ext_resource type="PackedScene" uid="uid://dhfng66mn87fw" path="res://addons/project_mapper/scenes/list_separator.tscn" id="4_6gdqs"]
 [ext_resource type="PackedScene" uid="uid://311tr0h8fr21" path="res://addons/project_mapper/scenes/item_button.tscn" id="4_csdo8"]
+[ext_resource type="PackedScene" uid="uid://c0yiaf34hgivu" path="res://addons/project_mapper/scenes/icon_texture.tscn" id="7_ib6bm"]
 
 [node name="ProjectMapper" type="GraphEdit" unique_id=815122204 node_paths=PackedStringArray("_toolbar_row", "spacer", "toolbar_margin", "_toolbar", "reorganise_button", "expand_button", "_search_bar")]
 custom_minimum_size = Vector2(400, 400)
@@ -15,66 +16,72 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-scroll_offset = Vector2(-80.2366, -291.61218)
+scroll_offset = Vector2(-134.6507, -306.9799)
 connections = Array[Dictionary]([{
 "from_node": &"Node",
 "from_port": 0,
 "keep_alive": false,
-"to_node": &"autoload_test",
+"to_node": &"autoload_a",
 "to_port": 0
 }, {
-"from_node": &"Node",
-"from_port": 0,
-"keep_alive": false,
-"to_node": &"autoload2",
-"to_port": 0
-}, {
-"from_node": &"Base",
+"from_node": &"Parent",
 "from_port": 0,
 "keep_alive": false,
 "to_node": &"Child",
 "to_port": 0
 }, {
-"from_node": &"Node",
-"from_port": 0,
-"keep_alive": false,
-"to_node": &"NewBase",
-"to_port": 0
-}, {
-"from_node": &"Node",
-"from_port": 0,
-"keep_alive": false,
-"to_node": &"Base",
-"to_port": 0
-}, {
-"from_node": &"Child1",
+"from_node": &"ParentBChildA",
 "from_port": 0,
 "keep_alive": false,
 "to_node": &"Grandchild2",
 "to_port": 0
 }, {
-"from_node": &"NewBase",
+"from_node": &"ParentB",
 "from_port": 0,
 "keep_alive": false,
-"to_node": &"Child2",
+"to_node": &"ParentBChildB",
 "to_port": 0
 }, {
-"from_node": &"NewBase",
+"from_node": &"TileMapLayer",
 "from_port": 0,
 "keep_alive": false,
-"to_node": &"Child1",
+"to_node": &"TileMapChild",
 "to_port": 0
 }, {
-"from_node": &"Child1",
+"from_node": &"ParentB",
+"from_port": 0,
+"keep_alive": false,
+"to_node": &"ParentBChildA",
+"to_port": 0
+}, {
+"from_node": &"ParentBChildA",
 "from_port": 0,
 "keep_alive": false,
 "to_node": &"Grandchild3",
 "to_port": 0
 }, {
-"from_node": &"Child2",
+"from_node": &"Node",
+"from_port": 0,
+"keep_alive": false,
+"to_node": &"Parent",
+"to_port": 0
+}, {
+"from_node": &"ParentBChildB",
 "from_port": 0,
 "keep_alive": false,
 "to_node": &"Grandchild",
+"to_port": 0
+}, {
+"from_node": &"Node",
+"from_port": 0,
+"keep_alive": false,
+"to_node": &"ParentB",
+"to_port": 0
+}, {
+"from_node": &"Node",
+"from_port": 0,
+"keep_alive": false,
+"to_node": &"autoload_b",
 "to_port": 0
 }, {
 "from_node": &"Object",
@@ -82,8 +89,26 @@ connections = Array[Dictionary]([{
 "keep_alive": false,
 "to_node": &"Node",
 "to_port": 0
+}, {
+"from_node": &"Node2D",
+"from_port": 0,
+"keep_alive": false,
+"to_node": &"TileMapLayer",
+"to_port": 0
+}, {
+"from_node": &"CanvasItem",
+"from_port": 0,
+"keep_alive": false,
+"to_node": &"Node2D",
+"to_port": 0
+}, {
+"from_node": &"Node",
+"from_port": 0,
+"keep_alive": false,
+"to_node": &"CanvasItem",
+"to_port": 0
 }])
-zoom = 0.51004463
+zoom = 0.39126712
 show_arrange_button = false
 script = ExtResource("1_s6k42")
 settings = ExtResource("2_gm68t")
@@ -98,6 +123,7 @@ section_toggle_packed = ExtResource("3_nnh7x")
 item_button_packed = ExtResource("4_csdo8")
 todo_button_packed = ExtResource("3_ev3mb")
 list_separator_packed = ExtResource("4_6gdqs")
+icon_texture_packed = ExtResource("7_ib6bm")
 
 [node name="ProjectMapperToolbar" parent="." unique_id=1583226405 instance=ExtResource("2_6svym")]
 layout_mode = 0

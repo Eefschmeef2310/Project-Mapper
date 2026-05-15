@@ -7,7 +7,8 @@ static func scan_project() -> Dictionary:
 	
 	#Tag autoloads immediately so we can reference them
 	_tag_autoloads(result)
-	
+	_scan_scenes(result)
+
 	#Build a map to resolve Global Autoload names back to their node keys
 	var autoload_map = {}
 	for cname in result:
@@ -58,6 +59,8 @@ static func _inject_godot_ancestors(result: Dictionary) -> void:
 			"path": "",
 			"variables": [],
 			"functions": [],
+			"signals": [],
+			"scenes": [],
 			"builtin": true,
 			"todos": [],
 			"signal_connections": [],
@@ -363,11 +366,32 @@ static func _parse_gdscript(path: String, result: Dictionary) -> void:
 		})
 
 	var stripped = _strip_gdscript(source)
+
+	var signal_rx := RegEx.new()
+	signal_rx.compile(r"(?m)^signal\s+(\w+)(?:\s*\(([^)]*)\))?")
+	var emit_rx := RegEx.new()
+	emit_rx.compile(r"\b(\w+)\.emit\s*\(")
+	var legacy_emit_rx := RegEx.new()
+	legacy_emit_rx.compile(r"emit_signal\s*\(\s*[\"'](\w+)[\"']")
+	var emitted_signals: Dictionary = {}
+	for m in emit_rx.search_all(stripped):
+		emitted_signals[m.get_string(1)] = true
+	for m in legacy_emit_rx.search_all(source):
+		emitted_signals[m.get_string(1)] = true
+	var signals: Array = []
+	for m in signal_rx.search_all(source):
+		var sig_name: String = m.get_string(1)
+		var sig_args: String = m.get_string(2).strip_edges() if m.get_string(2) != "" else ""
+		var line: int = source.count("\n", 0, m.get_start()) + 1
+		signals.append({"name": sig_name, "args": sig_args, "line": line, "emitted": emitted_signals.has(sig_name)})
+
 	result[cname] = {
 		"extends": parent,
 		"path": path,
 		"variables": variables,
 		"functions": functions,
+		"signals": signals,
+		"scenes": [],
 		"todos": _parse_todos(source),
 		"signal_connections": _parse_signal_connections(source, stripped, result),
 		"outbound_calls": [],
@@ -457,11 +481,13 @@ static func _parse_csharp(path: String, result: Dictionary) -> void:
 		"path": path,
 		"variables": variables,
 		"functions": functions,
+		"signals": [],
+		"scenes": [],
 		"todos": _parse_todos(source),
 		"signal_connections": [],
 		"outbound_calls": [],
 	}
-
+	
 # ── C++ ─────────────────────────────────────────────────────────────────────
 
 static func _parse_cpp(path: String, result: Dictionary) -> void:
@@ -492,7 +518,7 @@ static func _parse_cpp(path: String, result: Dictionary) -> void:
 		if not result.has(cname):
 			result[cname] = {
 				"extends": "", "path": path,
-				"variables": [], "functions": [],
+				"variables": [], "functions": [], "signals": [], "scenes": [],
 				"todos": _parse_todos(source),
 				"signal_connections": [], "outbound_calls": [],
 			}
@@ -540,7 +566,83 @@ static func _parse_cpp(path: String, result: Dictionary) -> void:
 		"path": path,
 		"variables": variables,
 		"functions": functions,
+		"signals": [],
+		"scenes": [],
 		"todos": _parse_todos(source),
 		"signal_connections": [],
 		"outbound_calls": [],
 	}
+
+# ---------------------------------------------------------------------------
+# Scene scanning
+# ---------------------------------------------------------------------------
+
+static func _collect_scenes(path: String, out: Array) -> void:
+	if path.contains("res://addons/"): return
+	var dir := DirAccess.open(path)
+	if not dir: return
+	dir.list_dir_begin()
+	var fname := dir.get_next()
+	while fname != "":
+		if not fname.begins_with("."):
+			var full := path.path_join(fname)
+			if dir.current_is_dir():
+				_collect_scenes(full, out)
+			elif fname.ends_with(".tscn"):
+				out.append(full)
+		fname = dir.get_next()
+
+static func _scan_scenes(result: Dictionary) -> void:
+	var path_to_class: Dictionary = {}
+	for cname in result:
+		var p: String = result[cname].get("path", "")
+		if p != "":
+			path_to_class[p] = cname
+
+	var scene_files: Array = []
+	_collect_scenes("res://", scene_files)
+	if scene_files.is_empty(): return
+
+	var ext_res_rx := RegEx.new()
+	ext_res_rx.compile(r'\[ext_resource[^\]]*\]')
+	var path_attr_rx := RegEx.new()
+	path_attr_rx.compile(r'path="([^"]+)"')
+	var id_attr_rx := RegEx.new()
+	id_attr_rx.compile(r'\bid="([^"]+)"')
+	var node_rx := RegEx.new()
+	node_rx.compile(r'\[node[^\]]*\]')
+	var script_rx := RegEx.new()
+	script_rx.compile(r'script\s*=\s*ExtResource\s*\(\s*"([^"]+)"\s*\)')
+
+	for scene_path in scene_files:
+		var source := FileAccess.get_file_as_string(scene_path)
+		if source == "": continue
+
+		var res_map: Dictionary = {}
+		for m in ext_res_rx.search_all(source):
+			var tag := m.get_string()
+			if not 'type="Script"' in tag: continue
+			var pm := path_attr_rx.search(tag)
+			var im := id_attr_rx.search(tag)
+			if pm and im:
+				res_map[im.get_string(1)] = pm.get_string(1)
+		if res_map.is_empty(): continue
+
+		var node_m := node_rx.search(source)
+		if not node_m: continue
+		if "parent=" in node_m.get_string(): continue
+
+		var body_start := node_m.get_end()
+		var next_node_m := node_rx.search(source, body_start)
+		var node_body := source.substr(body_start, next_node_m.get_start() - body_start if next_node_m else -1)
+
+		var sm := script_rx.search(node_body)
+		if not sm: continue
+
+		var script_path: String = res_map.get(sm.get_string(1), "")
+		if script_path == "": continue
+
+		var cname_: String = path_to_class.get(script_path, "")
+		if cname_ == "": continue
+
+		result[cname_]["scenes"].append(scene_path)

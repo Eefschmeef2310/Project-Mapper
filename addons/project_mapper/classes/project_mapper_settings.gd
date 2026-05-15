@@ -47,6 +47,10 @@ static func _make_flat(color: Color, border: Color = Color.TRANSPARENT, border_w
 @export var call_edge_out_color: Color = Color(0.2, 0.9, 0.4):
 	set(v): call_edge_out_color = v; emit_changed()
 
+## Used for signal connection edges
+@export var signal_edge_color: Color = Color(1.0, 0.55, 0.15):
+	set(v): signal_edge_color = v; emit_changed()
+
 # ---------------------------------------------------------------------------
 # Arrow Overlay
 # ---------------------------------------------------------------------------
@@ -69,23 +73,42 @@ static func _make_flat(color: Color, border: Color = Color.TRANSPARENT, border_w
 
 @export_group("Font Colours")
 
-@export var font_variable: Color = Color(0.8, 0.8, 0.8):
-	set(v): font_variable = v; emit_changed()
+@export var font_scene: Color = Color(0.5, 0.85, 0.7):
+	set(v): font_scene = v; emit_changed()
 
-@export var font_override: Color = Color(0.6, 0.9, 1.0):
-	set(v): font_override = v; emit_changed()
-
-@export var font_missing_super: Color = Color(1.0, 0.6, 0.1):
-	set(v): font_missing_super = v; emit_changed()
+@export var font_variables_header: Color = Color("bce0ffff"):
+	set(v): font_variables_header = v; emit_changed()
 
 @export var font_todo_header: Color = Color(1.0, 0.75, 0.2):
 	set(v): font_todo_header = v; emit_changed()
 
-@export var font_todo_item: Color = Color(0.75, 0.75, 0.55):
-	set(v): font_todo_item = v; emit_changed()
+@export var font_missing_super: Color = Color(1.0, 0.6, 0.1):
+	set(v): font_missing_super = v; emit_changed()
 
 @export var font_hover: Color = Color(1.0, 1.0, 1.0):
 	set(v): font_hover = v; emit_changed()
+
+@export_subgroup("Signals")
+
+@export var font_signal: Color = Color("44ff5eff"):
+	set(v): font_signal = v; emit_changed()
+
+@export var font_signal_unemitted: Color = Color(0.9, 0.4, 0.4):
+	set(v): font_signal_unemitted = v; emit_changed()
+
+@export_subgroup("Functions")
+
+@export var font_functions_header: Color = Color(0.4, 0.902, 1.0, 1.0):
+	set(v): font_functions_header = v; emit_changed()
+
+@export var font_static_functions_header: Color = Color(0.4, 0.902, 1.0, 1.0):
+	set(v): font_static_functions_header = v; emit_changed()
+
+@export var font_builtin_functions_header: Color = Color(0.4, 0.902, 1.0, 1.0):
+	set(v): font_builtin_functions_header = v; emit_changed()
+
+@export var font_override_functions_header: Color = Color(0.4, 0.902, 1.0, 1.0):
+	set(v): font_override_functions_header = v; emit_changed()
 
 # ---------------------------------------------------------------------------
 # Layout
