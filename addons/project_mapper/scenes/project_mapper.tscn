@@ -9,7 +9,7 @@
 [ext_resource type="PackedScene" uid="uid://311tr0h8fr21" path="res://addons/project_mapper/scenes/item_button.tscn" id="4_csdo8"]
 [ext_resource type="PackedScene" uid="uid://c0yiaf34hgivu" path="res://addons/project_mapper/scenes/icon_texture.tscn" id="7_ib6bm"]
 
-[node name="ProjectMapper" type="GraphEdit" unique_id=815122204 node_paths=PackedStringArray("_toolbar_row", "spacer", "toolbar_margin", "_toolbar", "reorganise_button", "expand_button", "_search_bar")]
+[node name="ProjectMapper" type="GraphEdit" unique_id=815122204 node_paths=PackedStringArray("_toolbar_row", "spacer", "toolbar_margin", "_toolbar", "reorganise_button", "expand_button", "_search_bar", "scan_folder_button")]
 custom_minimum_size = Vector2(400, 400)
 anchors_preset = 15
 anchor_right = 1.0
@@ -119,6 +119,7 @@ _toolbar = NodePath("ProjectMapperToolbar/ToolbarMargin/HBoxContainer")
 reorganise_button = NodePath("ProjectMapperToolbar/ToolbarMargin/HBoxContainer/ReorganiseButton")
 expand_button = NodePath("ProjectMapperToolbar/ToolbarMargin/HBoxContainer/ExpandButton")
 _search_bar = NodePath("ProjectMapperToolbar/ToolbarMargin/HBoxContainer/SearchEdit")
+scan_folder_button = NodePath("ProjectMapperToolbar/ToolbarMargin/HBoxContainer/ScanFolderButton")
 section_toggle_packed = ExtResource("3_nnh7x")
 item_button_packed = ExtResource("4_csdo8")
 todo_button_packed = ExtResource("3_ev3mb")
@@ -135,6 +136,7 @@ grow_horizontal = 1
 custom_minimum_size = Vector2(0, 64)
 
 [connection signal="pressed" from="ProjectMapperToolbar/ToolbarMargin/HBoxContainer/ReorganiseButton" to="." method="_reorganise"]
+[connection signal="pressed" from="ProjectMapperToolbar/ToolbarMargin/HBoxContainer/ScanFolderButton" to="." method="_on_scan_folder_pressed"]
 [connection signal="pressed" from="ProjectMapperToolbar/ToolbarMargin/HBoxContainer/ExpandButton" to="." method="_on_expand_button_pressed"]
 [connection signal="text_changed" from="ProjectMapperToolbar/ToolbarMargin/HBoxContainer/SearchEdit" to="." method="_apply_search"]
 [connection signal="toggled" from="ProjectMapperToolbar/ToolbarMargin/HBoxContainer/StraightLinesButton" to="." method="_on_straight_lines_checked"]

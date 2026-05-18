@@ -25,6 +25,7 @@ var _dropdown_open_nodes : Dictionary
 @export var reorganise_button : Button
 @export var expand_button : Button
 @export var _search_bar : LineEdit
+@export var scan_folder_button : Button
 
 @export_group("Packed Scenes")
 @export var section_toggle_packed : PackedScene
@@ -40,6 +41,8 @@ var _straight_lines : bool = false
 var _all_expanded : bool = false
 var _first_open : bool = true
 var _last_script : String = ""
+var _scan_folder_path : String = "res://"
+var _folder_dialog : Window
 
 func _ready() -> void:
 	call_deferred("_apply_line_curve")
@@ -47,6 +50,7 @@ func _ready() -> void:
 	visibility_changed.connect(_on_visibility_changed)
 	if Engine.is_editor_hint():
 		EditorInterface.get_resource_filesystem().filesystem_changed.connect(_on_filesystem_changed)
+	call_deferred("_on_visibility_changed")
 func _apply_line_curve() -> void:
 	connection_lines_curvature = 0.0 if _straight_lines else 0.5
 
@@ -61,7 +65,11 @@ func _on_settings_changed() -> void:
 	if not _dropdown_open_nodes.is_empty():
 		_rebuild_call_edges()
 	_apply_layout()
+	if not is_inside_tree():
+		return
 	await get_tree().process_frame
+	if not is_inside_tree():
+		return
 	_zoom_to_fit()
 	queue_redraw()
 
@@ -73,13 +81,14 @@ func _refresh_visuals() -> void:
 		var graph_node : GraphNode = _graph_nodes[class_name_]
 		var data : Dictionary = _class_data.get(class_name_)
 		var is_builtin = data.get("builtin")
+		var is_out_of_scope = data.get("out_of_scope", false)
 
 		if is_builtin:
 			graph_node.modulate = settings.builtin_modulate
 		else:
 			var dimmed := graph_node.modulate.a < 0.5
-			graph_node.self_modulate = _autoload_color(class_name_)
-			graph_node.modulate = Color.WHITE
+			graph_node.self_modulate = settings.out_of_scope_modulate if is_out_of_scope else _autoload_color(class_name_)
+			graph_node.modulate = Color(1, 1, 1, settings.out_of_scope_modulate.a) if is_out_of_scope else Color.WHITE
 			if dimmed: graph_node.modulate.a = 0.15
 			if _dropdown_open_nodes.has(class_name_):
 				_apply_border(graph_node, _autoload_color(class_name_))
@@ -181,9 +190,75 @@ func _select_node(class_name_: String) -> void:
 	target_node.selected = true
 	scroll_offset = (target_node.position_offset + target_node.size / 2.0) * zoom - size / 2.0
 
+func _on_scan_folder_pressed() -> void:
+	if _folder_dialog and is_instance_valid(_folder_dialog):
+		_folder_dialog.queue_free()
+
+	var dialog := ConfirmationDialog.new()
+	_folder_dialog = dialog
+	dialog.title = "Select Folder to Scan"
+	dialog.min_size = Vector2i(380, 480)
+
+	var tree := Tree.new()
+	tree.custom_minimum_size = Vector2(0, 400)
+	dialog.add_child(tree)
+
+	var folder_icon := EditorInterface.get_base_control().get_theme_icon("Folder", "EditorIcons")
+
+	var root := tree.create_item()
+	root.set_icon(0, folder_icon)
+	root.set_text(0, "res:// (entire project)")
+	root.set_metadata(0, "res://")
+	_populate_folder_tree(tree, root, "res://", folder_icon)
+
+	dialog.confirmed.connect(func():
+		var selected := tree.get_selected()
+		if selected:
+			_on_folder_selected(selected.get_metadata(0))
+		dialog.queue_free()
+		_folder_dialog = null
+	)
+	dialog.canceled.connect(func():
+		dialog.queue_free()
+		_folder_dialog = null
+	)
+	EditorInterface.get_base_control().add_child(dialog)
+	dialog.popup_centered()
+
+func _populate_folder_tree(tree: Tree, parent_item: TreeItem, path: String, folder_icon: Texture2D) -> void:
+	var dir := DirAccess.open(path)
+	if not dir:
+		return
+	dir.list_dir_begin()
+	var subdirs: Array[String] = []
+	var fname := dir.get_next()
+	while fname != "":
+		if not fname.begins_with(".") and dir.current_is_dir():
+			var full := path.path_join(fname)
+			if not full.begins_with("res://addons"):
+				subdirs.append(fname)
+		fname = dir.get_next()
+	subdirs.sort()
+	for d in subdirs:
+		var full := path.path_join(d)
+		var item := tree.create_item(parent_item)
+		item.set_icon(0, folder_icon)
+		item.set_text(0, d)
+		item.set_metadata(0, full)
+		_populate_folder_tree(tree, item, full, folder_icon)
+
+func _on_folder_selected(path: String) -> void:
+	_scan_folder_path = path
+	var display := path.trim_prefix("res://").trim_suffix("/")
+	scan_folder_button.text = "Scanning: /%s" % display if display != "" else "Scan Folder"
+	if _folder_dialog and is_instance_valid(_folder_dialog):
+		_folder_dialog.queue_free()
+		_folder_dialog = null
+	_reorganise()
+
 func _reorganise() -> void:
 	_clear_graph()
-	_class_data = CodebaseParser.scan_project()
+	_class_data = CodebaseParser.scan_project(_scan_folder_path)
 	_create_class_nodes()
 	if _toolbar_row: _toolbar_row.move_to_front() 
 	_draw_inheritance_connections()
@@ -298,7 +373,7 @@ func _create_class_nodes() -> void:
 			data.get("scenes", []), data.get("variables", []), data.get("signals", []), data.get("functions", []),
 			_get_overrides(class_name_), data.get("builtin", false),
 			child_counts.get(class_name_, 0), autoload_name,
-			generation_map.get(class_name_, 0))
+			generation_map.get(class_name_, 0), data.get("out_of_scope", false))
 		add_child(graph_node)
 		_graph_nodes[class_name_] = graph_node
 		if autoload_name != "":
@@ -779,7 +854,7 @@ func _make_section_toggle(section_label: String, item_count: int) -> Button:
 
 func _make_node(class_name_: String, script_path: String, scenes: Array, variables: Array, signals: Array, functions: Array,
 		overrides: Dictionary, builtin: bool = false, child_count: int = 0, autoload_name: String = "",
-		generation: int = 0) -> GraphNode:
+		generation: int = 0, out_of_scope: bool = false) -> GraphNode:
 	var graph_node := GraphNode.new()
 	var display_name := autoload_name if autoload_name != "" else class_name_
 	graph_node.title = display_name
@@ -791,17 +866,28 @@ func _make_node(class_name_: String, script_path: String, scenes: Array, variabl
 	var title_label := titlebar_hbox.get_child(0) as Label
 	if title_label:
 		title_label.mouse_filter = Control.MOUSE_FILTER_PASS
-		title_label.tooltip_text = "Generation %d" % generation
+		title_label.tooltip_text = "This class is not present in the scanned folder" if out_of_scope else "Generation %d" % generation
 	var icon_class := class_name_
-	while icon_class != "" and not ClassDB.class_exists(icon_class):
-		icon_class = _class_data.get(icon_class, {}).get("extends", "")
-	if icon_class != "":
-		var icon_tex := EditorInterface.get_base_control().get_theme_icon(icon_class, "EditorIcons")
-		if icon_tex:
-			var icon_rect = icon_texture_packed.instantiate() as TextureRect
-			icon_rect.texture = icon_tex
-			titlebar_hbox.add_child(icon_rect)
-			titlebar_hbox.move_child(icon_rect, 0)
+	if not ClassDB.class_exists(icon_class):
+		if script_path != "":
+			var icon_script := load(script_path) as Script
+			if icon_script:
+				var native := icon_script.get_instance_base_type()
+				if native != "":
+					icon_class = native
+		if not ClassDB.class_exists(icon_class):
+			var visited := {}
+			while icon_class != "" and not ClassDB.class_exists(icon_class) and not visited.has(icon_class):
+				visited[icon_class] = true
+				icon_class = _class_data.get(icon_class, {}).get("extends", "")
+	if not ClassDB.class_exists(icon_class):
+		icon_class = "Script"
+	var icon_tex := EditorInterface.get_base_control().get_theme_icon(icon_class, "EditorIcons")
+	if icon_tex:
+		var icon_rect = icon_texture_packed.instantiate() as TextureRect
+		icon_rect.texture = icon_tex
+		titlebar_hbox.add_child(icon_rect)
+		titlebar_hbox.move_child(icon_rect, 0)
 	if child_count > 0:
 		var count_label := Label.new()
 		count_label.text = "(%d %s)" % [child_count, "Child" if child_count == 1 else "Children"]
@@ -814,6 +900,9 @@ func _make_node(class_name_: String, script_path: String, scenes: Array, variabl
 
 	if builtin:
 		graph_node.modulate = settings.builtin_modulate
+	elif out_of_scope:
+		graph_node.self_modulate = settings.out_of_scope_modulate
+		graph_node.modulate = Color(1, 1, 1, settings.out_of_scope_modulate.a)
 
 	var file_button := Button.new()
 	file_button.text = "../%s/%s" % [script_path.get_base_dir().get_file(), script_path.get_file()]
@@ -1022,7 +1111,10 @@ func _make_node(class_name_: String, script_path: String, scenes: Array, variabl
 
 func _open_script(script_path: String, line: int) -> void:
 	var script := load(script_path) as Script
-	if script: EditorInterface.edit_script(script, line, 0)
+	if not script: return
+	EditorInterface.edit_script(script, line, 0)
+	if settings.dock_position == ProjectMapperSettings.DockPosition.MAIN_SCREEN:
+		EditorInterface.set_main_screen_editor("Script")
 
 
 func _on_begin_node_move() -> void:

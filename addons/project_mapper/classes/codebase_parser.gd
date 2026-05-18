@@ -1,10 +1,11 @@
 class_name CodebaseParser
 
-static func scan_project() -> Dictionary:
+static func scan_project(scan_path: String = "res://") -> Dictionary:
+	# Always scan the full project so ancestor chains are complete.
 	var result = {}
 	_scan_dir("res://", result)
 	_inject_godot_ancestors(result)
-	
+
 	#Tag autoloads immediately so we can reference them
 	_tag_autoloads(result)
 	_scan_scenes(result)
@@ -22,6 +23,32 @@ static func scan_project() -> Dictionary:
 			if source != "":
 				var stripped = _strip_comments_and_strings(source, path)
 				result[cname]["outbound_calls"] = _parse_outbound_calls(stripped, result, _lang(path), autoload_map)
+
+	# If a subfolder was selected, keep only classes in that folder plus every
+	# ancestor (shown dimmed) and discard everything else.
+	if scan_path != "res://":
+		var in_scope: Dictionary = {}
+		for cname in result:
+			if result[cname].get("path", "").begins_with(scan_path):
+				in_scope[cname] = true
+
+		var keep: Dictionary = {}
+		var queue: Array = in_scope.keys()
+		while queue.size() > 0:
+			var cname: String = queue.pop_back()
+			if keep.has(cname):
+				continue
+			keep[cname] = true
+			var parent: String = result.get(cname, {}).get("extends", "")
+			if parent != "":
+				queue.append(parent)
+
+		for cname in result.keys():
+			if not keep.has(cname):
+				result.erase(cname)
+			elif not in_scope.has(cname) and not result[cname].get("builtin", false):
+				result[cname]["out_of_scope"] = true
+
 	return result
 
 # ---------------------------------------------------------------------------
@@ -57,14 +84,8 @@ static func _inject_godot_ancestors(result: Dictionary) -> void:
 		result[parent] = {
 			"extends": grandparent,
 			"path": "",
-			"variables": [],
-			"functions": [],
-			"signals": [],
-			"scenes": [],
-			"builtin": true,
-			"todos": [],
-			"signal_connections": [],
-			"outbound_calls": [],
+			"variables": [], "functions": [], "signals": [], "scenes": [],
+			"builtin": true, "todos": [], "signal_connections": [], "outbound_calls": [],
 		}
 		if grandparent != "":
 			to_check.append(parent)

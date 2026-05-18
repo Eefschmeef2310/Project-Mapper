@@ -2,6 +2,5 @@
 
 [node name="ItemButton" type="Button" unique_id=692410732]
 mouse_default_cursor_shape = 2
-theme_override_font_sizes/font_size = 20
 flat = true
 alignment = 0

@@ -2,6 +2,17 @@
 class_name ProjectMapperSettings
 extends Resource
 
+enum DockPosition { BOTTOM = 0, MAIN_SCREEN = 1 }
+
+# ---------------------------------------------------------------------------
+# Dock
+# ---------------------------------------------------------------------------
+@export_group("Dock")
+
+## Where the Project Mapper panel is placed. Requires plugin reload to take effect.
+@export var dock_position: DockPosition = DockPosition.BOTTOM:
+	set(v): dock_position = v; emit_changed()
+
 static func _make_flat(color: Color, border: Color = Color.TRANSPARENT, border_width: int = 0) -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
 	s.bg_color = color
@@ -27,6 +38,9 @@ static func _make_flat(color: Color, border: Color = Color.TRANSPARENT, border_w
 
 @export var builtin_modulate: Color = Color(1.0, 1.0, 1.0, 0.45):
 	set(v): builtin_modulate = v; emit_changed()
+
+@export var out_of_scope_modulate: Color = Color("ff030096"):
+	set(v): out_of_scope_modulate = v; emit_changed()
 
 @export var autoload_color: Color = Color(1.0, 0.88, 0.2, 1.0):
 	set(v): autoload_color = v; emit_changed()

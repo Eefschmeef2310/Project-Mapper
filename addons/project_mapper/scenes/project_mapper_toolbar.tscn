@@ -18,11 +18,18 @@ theme_override_constants/margin_left = 20
 layout_mode = 2
 mouse_filter = 0
 
+[node name="ScanFolderButton" type="Button" parent="ToolbarMargin/HBoxContainer" unique_id=742938156]
+layout_mode = 2
+text = "Scan Folder"
+
+[node name="VSeparator" type="VSeparator" parent="ToolbarMargin/HBoxContainer" unique_id=1056958640]
+layout_mode = 2
+
 [node name="ReorganiseButton" type="Button" parent="ToolbarMargin/HBoxContainer" unique_id=196961474]
 layout_mode = 2
 text = "Reorganise"
 
-[node name="VSeparator" type="VSeparator" parent="ToolbarMargin/HBoxContainer" unique_id=1056958640]
+[node name="VSeparator5" type="VSeparator" parent="ToolbarMargin/HBoxContainer" unique_id=714187203]
 layout_mode = 2
 
 [node name="ExpandButton" type="Button" parent="ToolbarMargin/HBoxContainer" unique_id=1817054307]
