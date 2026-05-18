@@ -1,7 +1,7 @@
 # Project Mapper
 Project Mapper is a plugin for Godot 4.6+ that create an Entity Relationship Diagram for an entire codebase, and shows data stored inside each class script.
 
-<img width="842" height="566" alt="1" src="https://github.com/user-attachments/assets/73745c92-1ab1-4cf7-a087-fa9f0be46433" />
+<img width="697" height="376" alt="Screenshot 2026-05-18 at 9 54 09 pm" src="https://github.com/user-attachments/assets/cddc9e94-aaf9-4a9e-ae40-0dc46758abf6" />
 
 # Features
 The Project Mapper plugin scans your entire project codebase, then visualises the inheritance between classes in a graph format. This graph format shows information on every class, including their signals, variables, static functions, instance functions, built-in functions, override functions and TODOs. Additionally, the graph view shows function calls between classes, and the scenes in the filesystem that use your project's classes.
@@ -15,6 +15,7 @@ The `Project Mapper` window will automatically open when the plugin is enabled. 
 
 ## Toolbar
 The top of the window contains the following controls for the graph view:
+* **Scan Folder Button**: Opens a window that lets you scan a specific folder in your project and specifically map the contents of the folder (This will still show parent classes, and will be colored differently if they are not present in the scanned folder).
 * **Reorganise Button**: Arranges all of the graph nodes.
 * **Expand/Collapse All Button**: Opens the dropdowns on every graph node and reorganises the graph view.
 * **Search Bar**: Highlights graph where the search query is present in the class's name or script.
@@ -46,12 +47,12 @@ Opening a function dropdown shows the selected class' outgoing function calls (g
 
 <img width="1042" height="1019" alt="2" src="https://github.com/user-attachments/assets/142514a8-4744-40eb-adb3-8989acb79bad" />
 
-NOTE: The Project Mapper does not track function calls within a class.
+*NOTE*: The Project Mapper does not track function calls within a class.
 
 # View settings
 Finally, the `project_mapper_settings.tres` file contains settings you can use to control how you want the project to look. This includes various color and style options.
 
-<img width="403" height="775" alt="Screenshot 2026-05-15 at 11 22 17 am" src="https://github.com/user-attachments/assets/411b2494-995f-441f-8572-09adfeb78d99" />
+<img width="231" height="554" alt="Screenshot 2026-05-18 at 9 55 29 pm" src="https://github.com/user-attachments/assets/f865df4d-dd75-4982-b22b-4ab17c874500" />
 
 # License
 MIT License. See `LICENSE` for details.
